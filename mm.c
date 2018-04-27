@@ -107,14 +107,11 @@ int main(int argc, char **argv) {
 		printMatrix(matrixB, rowB, colB);
 	}
 	
-	/*
-	//Printing the resulting matrix
+	//Ending the program
 	if(rank == 0) {
-		printMatrix(matrix, row, col);
-		freeMatrix(&matrix);
+		freeMatrix(&matrixA);
+		freeMatrix(&matrixB);
 	}
-	*/
-	
 	MPI_Finalize();
 	return 0;
 }
