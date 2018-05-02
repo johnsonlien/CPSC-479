@@ -1,10 +1,10 @@
 /* CPSC 479
  * Topic: Matrix Multiplication
- * 
+ *
  * Notes and Assumptions:
  * This program assumes that the txt files provided has the correct number
  * of rows and columns for the matrices
- * 
+ *
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -23,12 +23,12 @@ int mallocMatrix(int ***matrix, int row, int col) {
 		printf("freed m\n");
 		return -1;
 	}
-	
+
 	//Set up the pointers into contigious memory
 	for(int i = 0; i < row; i++) {
 		(*matrix)[i] = &(m[i*col]);
 	}
-	
+
 	return 0;
 }
 
@@ -58,16 +58,18 @@ void printMatrix(int **matrix, int row, int col) {
 	}
 }
 
+
 int main(int argc, char **argv) {
 	int **matrixA, **matrixB;
 	int rank, size, rowA, rowB, colA, colB;
 	FILE *file;
 	MPI_Status status;
-	
+
+
 	MPI_Init(&argc, &argv);
 	MPI_Comm_size(MPI_COMM_WORLD, &size);
 	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-	
+
 	//Read in the matrix in process 0
 	if(rank == 0) {
 		//Read in matrixA
@@ -76,37 +78,64 @@ int main(int argc, char **argv) {
 			printf("matrixA.txt could not be opened.\n");
 			MPI_Abort(MPI_COMM_WORLD, 1);
 		}
-		
+
 		//Get the values on the first row of matrixA.txt
 		fscanf(file, "%d %d", &rowA, &colA);
 		mallocMatrix(&matrixA, rowA, colA);
 		readMatrix(file, matrixA, rowA, colA);
 		fclose(file);
-		
+
 		//Read in matrixB
 		file = fopen("matrixB.txt", "r");
 		if(file == NULL) {
 			printf("matrixB.txt could not be opened.\n");
 			MPI_Abort(MPI_COMM_WORLD, 1);
 		}
-		
+
 		//Get the values from the first row of matrixB.txt
 		fscanf(file, "%d %d", &rowB, &colB);
 		mallocMatrix(&matrixB, rowB, colB);
 		readMatrix(file, matrixB, rowB, colB);
 		fclose(file);
-		
+
 		//Check if matrixA's # of columns is equal to matrixB's # of rows
 		if(colA != rowB) {
 			printf("Error!\nMatrixA's number of columns has to equal MatrixB's number of rows.\n");
 			MPI_Abort(MPI_COMM_WORLD, 2);
 		}
-		
+
 		printMatrix(matrixA, rowA, colA);
 		printf("\n\n");
 		printMatrix(matrixB, rowB, colB);
+
+
 	}
-	
+	//used for breaking matrix B into pieces to be multiplied by A
+	int chunkofB[rowB];
+	int solution_array[rowA];
+	int sum = 0
+	//broadcast all of matrix a because its the smaller one that
+	//multiplies against all columns in B
+    MPI_Bcast(matrixA,rowA*colA,MPI_INT,0,MPI_COMM_WORLD);
+    //scatter rows of first matrix to different processes
+    MPI_Scatter(matrixB,rowB,MPI_INT,chunkofB,rowB,MPI_INT,0,MPI_COMM_WORLD);
+
+    //begin multiplication by all procs
+    MPI_Barrier(MPI_COMM_WORLD);
+    //not sure where the range is here, col and rows are mixed up
+        for(i=0; i <rowA;i++)
+        {
+            for(j=0;j<rowB;j++)
+            {
+                sum = sum + chunkofB[j] * matrixA[i][j]
+            }
+            //this array hasnt been declared yet, but its gotta be the size
+            //of the outter loop
+            solution_array[i] = sum;
+            sum = 0;
+        }
+
+
 	//Ending the program
 	if(rank == 0) {
 		freeMatrix(&matrixA);
